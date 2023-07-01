@@ -159,7 +159,7 @@ function get_sap_list {
    clear
    printf "Loading...\n"
    PROFILES=$(ls -1 /usr/sap/???/SYS/profile/???_*_* | grep -vE '\.[0-9]|\.old|\_check|\.log\.back|\.backup|dev_' 2>/dev/null)
-   index=3
+   index=1
    for PROFILE in $PROFILES; do
       # profile suddenly disappeared?
       if [ ! -e "$PROFILE" ]; then
@@ -307,15 +307,13 @@ function sapinstance_start {
          output=`su - ${SIDADM} -c "sapcontrol -nr ${InstanceNr} -function Start"`
          rc=$?
          # 日志记录
-         LOG_ACTION="Starting SAP Instance $SID-$InstanceName: $output"
-         log_action
+         log_action "Starting SAP Instance $SID-$InstanceName: $output"
       fi
 
       if [ $rc -ne 0 ]
       then
          # 日志记录
-         LOG_ACTION="SAP Instance $SID-$InstanceName start failed."
-         log_action
+         log_action "SAP Instance $SID-$InstanceName start failed."
          return "ERR_GENERIC"
       fi
 
@@ -340,10 +338,8 @@ function sapinstance_start {
          else
             if [ $loopcount -eq 1 ] 
             then
-               LOG_ACTION="SAP Instance $SID-$InstanceName start failed: $output"
-               log_action
-               LOG_ACTION= "Try to recover $SID-$InstanceName"
-               log_action
+               log_action "SAP Instance $SID-$InstanceName start failed: $output"
+               log_action "Try to recover $SID-$InstanceName"
                # 强制清理实例
                cleanup_instance
             else
@@ -359,14 +355,12 @@ function sapinstance_start {
 
    if [ $startrc -eq 0 ]
    then
-      LOG_ACTION="SAP Instance $SID-$InstanceName started: $output"
-      log_action
+      log_action "SAP Instance $SID-$InstanceName started: $output"
       # 启动成功
       rc=0
    else
       # 日志记录
-      LOG_ACTION="SAP Instance $SID-$InstanceName start failed: $output"
-      log_action
+      log_action "SAP Instance $SID-$InstanceName start failed: $output"
       # 启动失败
       rc=1
    fi
@@ -403,11 +397,9 @@ function check_sapstartsrv {
       local systemd_unit_name="SAP${SID}_${InstanceNr}"
       # 检查systemd 服务
       if $SYSTEMCTL  status "$systemd_unit_name" 1>/dev/null 2>/dev/null; then
-         LOG_ACTION="systemd service $systemd_unit_name is active"
-         log_action
+         log_action "systemd service $systemd_unit_name is active"
       else
-         LOG_ACTION="systemd service $systemd_unit_name is not active, it will be started using systemd"
-         log_action
+         log_action "systemd service $systemd_unit_name is not active, it will be started using systemd"
          $SYSTEMCTL start "$systemd_unit_name" 1>/dev/null 2>/dev/null
          # use start, because restart does also stop sap instance
       fi
@@ -415,8 +407,7 @@ function check_sapstartsrv {
    else # otherwise continue with old code...  否则使用旧代码
       #判断.sapstream5${InstanceNr}13是否存在，不存在则重启
       if [ ! -S /tmp/.sapstream5${InstanceNr}13 ]; then
-         LOG_ACTION="sapstartsrv is not running for instance $SID-$InstanceName (no UDS), it will be started now"
-         log_action
+         log_action "sapstartsrv is not running for instance $SID-$InstanceName (no UDS), it will be started now"
          restart=1
          else
             output=`su - ${SIDADM} -c "sapcontrol -nr ${InstanceNr}  -function ParameterValue INSTANCE_NAME -format script"`
@@ -425,22 +416,18 @@ function check_sapstartsrv {
                runninginst=`echo "$output" | grep '^0 : ' | cut -d' ' -f3`
                if [ "$runninginst" != "$InstanceName" ]
                then
-                  LOG_ACTION="sapstartsrv is running for instance $runninginst, that service will be killed"
-                  log_action
+                  log_action "sapstartsrv is running for instance $runninginst, that service will be killed"
                   restart=1
                else
                   output=`su - ${SIDADM} -c "sapcontrol -nr ${InstanceNr}  -function AccessCheck Start"`
                   if [ $? -ne 0 ]; then
-                     LOG_ACTION="FAILED : sapcontrol -nr $InstanceNr -function AccessCheck Start (`ls -ld1 /tmp/.sapstream5${InstanceNr}13`)"
-                     log_action
-                     LOG_ACTION="sapstartsrv will be restarted to try to solve this situation, otherwise please check sapstsartsrv setup (SAP Note 927637)"
-                     log_action
+                     log_action "FAILED : sapcontrol -nr $InstanceNr -function AccessCheck Start (`ls -ld1 /tmp/.sapstream5${InstanceNr}13`)"
+                     log_action "sapstartsrv will be restarted to try to solve this situation, otherwise please check sapstsartsrv setup (SAP Note 927637)"
                      restart=1
                   fi
                fi
             else
-               LOG_ACTION= "sapstartsrv is not running for instance $SID-$InstanceName, it will be started now"
-               log_action
+               log_action "sapstartsrv is not running for instance $SID-$InstanceName, it will be started now"
                restart=1
             fi
          fi
@@ -469,13 +456,11 @@ function check_sapstartsrv {
 
             if [ $srvrc -ne 1 ]
             then
-               LOG_ACTION=  "sapstartsrv for instance $SID-$InstanceName was restarted !"
-               log_action
+               log_action "sapstartsrv for instance $SID-$InstanceName was restarted !"
                # 启动成功
                chkrc=0
             else
-               LOG_ACTION=  "sapstartsrv for instance $SID-$InstanceName could not be started!"
-               log_action
+               log_action "sapstartsrv for instance $SID-$InstanceName could not be started!"
                #启动失败
                chkrc=1
             fi
@@ -496,8 +481,7 @@ function sapinstance_stop {
    if [ $rc -eq 0 ]; then
       output=`su - ${SIDADM} -c "sapcontrol -nr ${InstanceNr}  -function Stop"`
       rc=$?
-      LOG_ACTION="Stopping SAP Instance $SID-$InstanceName: $output"
-      log_action
+      log_action "Stopping SAP Instance $SID-$InstanceName: $output"
    fi
    #如果sapstartsrv进程不正常则 WaitforStopped 3600 1
    if [ $rc -eq 0 ]
@@ -505,19 +489,16 @@ function sapinstance_stop {
       output=`su - ${SIDADM} -c "sapcontrol -nr ${InstanceNr}  -function  WaitforStopped 3600 1"`
       if [ $? -eq 0 ]
       then
-         LOG_ACTION="SAP Instance $SID-$InstanceName stopped: $output"
-         log_action
+         log_action "SAP Instance $SID-$InstanceName stopped: $output"
          #启动成功
          rc=0
       else
-         LOG_ACTION="SAP Instance $SID-$InstanceName stop failed: $output"
-         log_action
+         log_action "SAP Instance $SID-$InstanceName stop failed: $output"
          #启动失败
          rc=1
       fi
    else
-      LOG_ACTION="SAP Instance $SID-$InstanceName stop failed: $output"
-      log_action
+      log_action "SAP Instance $SID-$InstanceName stop failed: $output"
       #启动失败
       rc=1
    fi
@@ -529,14 +510,12 @@ function cleanup_instance {
    pkill -9 -f -U $SIDADM $InstanceName
    #使用 pkill -9 -f -U $sidadm $InstanceName 终止进程
    # 日志记录
-   LOG_ACTION="Terminated instance using 'pkill -9 -f -U $SIDADM $InstanceName'"
-   log_action
+   log_action "Terminated instance using 'pkill -9 -f -U $SIDADM $InstanceName'"
 
    # it is necessary to call cleanipc as user sidadm if the system has 'vmcj/enable = ON' set - otherwise SHM-segments in /dev/shm/SAP_ES2* cannot be removed
    su - $SIDADM -c "cleanipc $InstanceNr remove"
    # 日志记录
-   LOG_ACTION="Tried to remove shared memory resources using 'cleanipc $InstanceNr remove' as user $SIDADM"
-   log_action
+   log_action "Tried to remove shared memory resources using 'cleanipc $InstanceNr remove' as user $SIDADM"
    su - ${SIDADM} -c "sapcontrol -nr ${InstanceNr} -function StartService ${SID}  > /dev/null"
    return 0
 }
@@ -791,13 +770,12 @@ case $1 in
      ;;
 esac
 }
-#################################################################################################################
 ##################################################
 # Logging functions
 ##################################################
 function log_action {
    echo "`date '+%Y-%m-%d %T'`">>/usr/sap/sap_action.log
-   echo "ACTION: $LOG_ACTION     ">>/usr/sap/sap_action.log
+   echo "  $1     ">>/usr/sap/sap_action.log
    echo "-----------------------------------------------------">>/usr/sap/sap_action.log
 }
 function showversion {
@@ -824,12 +802,6 @@ function showhelp {
    printf "|                                                                              \n"
    printf "|==============================================================================\n"
 }
-function sap_action {
-   clear
-   #显示日志
-   LOG_ACTION="All SAP System started"
-   log_action
-}
 
 ###################################################
 # Sub Menu for components
@@ -840,53 +812,49 @@ function sub_menu {
    while [ $useropt != e ]
    do
       clear
-      printf "|===================SAP Instance Options Menu===================================\n"
-      printf "|                                                                               \n"
-      printf "| 欢迎来到SAP 的世界，欢迎使用本脚本                                                \n"
-      printf "| 本系统仅供个人交流学习，请勿做其他用途！                                           \n"
-      printf "|                                                                               \n"
-      printf "|=====================System Instance Infor=====================================\n"
-      printf "|     %-6s %-15s %-6s %-15s %-6s %-15s\n" "系统标识:" ${SID} "实例编号:" ${InstanceNr}  "服务用户:" ${SIDADM}
-      printf "|     %-6s %-15s %-6s %-15s %-6s %-15s\n" "实例名称:" ${InstanceName} "启动服务:" ${SAPSTARTSRV_STATUS} "实例状态:" ${STATUS} 
-      printf "|     %-6s %-15s %-6s %-15s %-6s %-15s\n" "日志路径:" ${SAPWORK} 
-      printf "|     %-6s %-15s %-6s %-15s %-6s %-15s\n" "启动参数:" ${SAPSTARTPROFILE} 
-      printf "|===============================================================================\n"
-      printf "|                                                                               \n"
-      printf "| 1.  Start                                                                     \n"
-      printf "| 2.  Restart                                                                   \n"
-      printf "| 3.  Shutdown                                                                  \n"
-      printf "| 4.  GetProcessList                                                            \n"
-      printf "| 5.  StartService                                                              \n"
-      printf "| 6.  RestartService                                                            \n"
+      printf "|===================SAP Instance Options Menu=======================================\n"
+      printf "| Welcome to the world of SAP, welcome to use this script                           \n"
+      printf "| This system is for personal communication and learning purposes only.             \n"
+      printf "| Please do not use it for any other purposes!                                      \n"
+      printf "|=====================System Instance Infor=========================================\n"
+      printf "| %-15s%-10s %-22s%-10s %-16s%-15s\n" "System ID:" ${SID} "Instance Number:" ${InstanceNr}  "Service Account:" ${SIDADM}
+      printf "| %-15s%-10s %-22s%-10s %-16s%-15s\n" "Instance Name:" ${InstanceName} "Start Service Status:" ${SAPSTARTSRV_STATUS} "Status:" ${STATUS} 
+      printf "| %-15s%-40s\n" "Work Log:" ${SAPWORK} 
+      printf "| %-15s%-40s\n" "Startp Profile:" ${SAPSTARTPROFILE} 
+      printf "|===================================================================================\n"
+      printf "| 1.  Start                                                                         \n"
+      printf "| 2.  Restart                                                                       \n"
+      printf "| 3.  Shutdown                                                                      \n"
+      printf "| 4.  GetProcessList                                                                \n"
+      printf "| 5.  StartService                                                                  \n"
+      printf "| 6.  RestartService                                                                \n"
       if [ "$SYSTEM_TYPE" = "ABAP" ]; then
-         printf "| 7.  Cleanipc                                                                  \n"
-         printf "| 8.  Get License                                                               \n"
-         printf "| 9.  Force Kill                                                                \n"
-         printf "| 10. Check Start Profile                                                       \n"
+         printf "| 7.  Cleanipc                                                                   \n"
+         printf "| 8.  Get License                                                                \n"
+         printf "| 9.  Force Kill                                                                 \n"
+         printf "| 10. Check Start Profile                                                        \n"
       fi
       if [ "$SYSTEM_TYPE" = "J2EE" ]; then
-         printf "| 7.  Cleanipc                                                                  \n"
-         printf "| 9.  Force Kill                                                                \n"
-         printf "| 10. Check Start Profile                                                       \n"
+         printf "| 7.  Cleanipc                                                                   \n"
+         printf "| 9.  Force Kill                                                                 \n"
+         printf "| 10. Check Start Profile                                                        \n"
       fi
       #判断是否为JAVA实例
       if [ "$(echo "$InstanceName" | cut -c1)" = "J" ]; then
-         printf "| 97. Run Configtool                                                            \n"
+         printf "| 97. Run Configtool                                                             \n"
       fi
       if [ "$SYSTEM_TYPE" = "SMDA" ]; then
-         printf "| 7.  Cleanipc                                                                  \n"
-         printf "| 9.  Force Kill                                                                \n"
-         printf "| 10. Check Start Profile                                                       \n"
+         printf "| 7.  Cleanipc                                                                   \n"
+         printf "| 9.  Force Kill                                                                 \n"
+         printf "| 10. Check Start Profile                                                        \n"
       fi
       if [ "$SYSTEM_TYPE" = "HDB" ]; then
-         printf "| 98. Get HDB Version                                                         \n"
+         printf "| 98. Get HDB Version                                                            \n"
       fi
-      printf "| 99. Collect logs                                                              \n"
-      printf "|                                                                               \n"
-      printf "| e.  Exit                                                                      \n"
-      printf "| m.  Return to Main Menu                                                       \n"
-      printf "|                                                                               \n"
-      printf "|===============================================================================\n"
+      printf "| 99. Collect logs                                                                  \n"
+      printf "| e.  Exit                                                                          \n"
+      printf "| m.  Return to Main Menu                                                           \n"
+      printf "|===================================================================================\n"
    
    printf "Please enter your selection and press <Enter>\n" 
    read useropt
@@ -903,26 +871,20 @@ function main_menu {
    while [ $userchoice != e ]
    do
       clear
-      printf "|======SAP Maintenance Menu=====================================================\n"
-      printf "|                                                                               \n"
-      printf "| Welcome to the world of SAP, welcome to use this script                       \n"
-      printf "| This system is for personal communication and learning purposes only.         \n"
-      printf "| Please do not use it for any other purposes!                                  \n"
-      printf "|                                                                               \n"
-      printf "| h.  Help                                                                      \n"
-      printf "| r.  Refresh                                                                   \n"
-      printf "| v.  Version                                                                   \n"
-      printf "| e.  Exit                                                                      \n"
-      printf "|                                                                               \n"
-      printf "| --------------------SAP Components--------------------------------------------\n"
-      printf "|                                                                               \n"
+      printf "|======SAP Maintenance Menu=========================================================\n"
+      printf "| Welcome to the world of SAP, welcome to use this script                           \n"
+      printf "| This system is for personal communication and learning purposes only.             \n"
+      printf "| Please do not use it for any other purposes!                                      \n"
+      printf "| h.  Help                                                                          \n"
+      printf "| r.  Refresh                                                                       \n"
+      printf "| v.  Version                                                                       \n"
+      printf "| e.  Exit                                                                          \n"
+      printf "| --------------------SAP Components------------------------------------------------\n"
       printf "|     %-5s %-12s %-10s %-6s %-15s %-12s %-8s\n" "SID" "InstanceName" "InstanceNr" "Type" "SAPVIRHOST"  "SAPSTARTSRV" "Status"
-      for ((i = 3; i < index; i++)); do
+      for ((i = 1; i < index; i++)); do
          printf "| %-2s. %-5s %-12s %-10s %-6s %-15s %-12s %-8s\n" $i "${profile_info["$i,SID"]}" "${profile_info["$i,InstanceName"]}" "${profile_info["$i,InstanceNr"]}" "${profile_info["$i,SYSTEM_TYPE"]}" "${profile_info["$i,SAPVIRHOST"]}" "${profile_info["$i,SAPSTARTSRV_STATUS"]}" "${profile_info["$i,STATUS"]}"
       done
-      printf "|                                                                               \n"
-      printf "|===============================================================================\n"
-      
+      printf "|===================================================================================\n"
       printf "Please enter your selection and press <Enter>\n" 
       read userchoice
       run_action $userchoice
@@ -936,6 +898,10 @@ function main_menu {
 # Added the following for the new Administration Console script name
 export HOSTNAME=`hostname`
 STATUPTIME=$(date -d "$(awk -F. '{print $1}' /proc/uptime) second ago" +"%Y-%m-%d %H:%M:%S")
+SAPHOSTCTRL="/usr/sap/hostctrl/exe/saphostctrl"
+SAPHOSTEXEC="/usr/sap/hostctrl/exe/saphostexec"
+SAPHOSTSRV="/usr/sap/hostctrl/exe/sapstartsrv"
+SAPHOSTOSCOL="/usr/sap/hostctrl/exe/saposcol"
 ################################################################################################
 # 取消java检测
 #check_java

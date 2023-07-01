@@ -546,27 +546,26 @@ function cleanup_instance {
 #######################################
 function run_action {
 case $1 in
-  h) clear;
-     showhelp 
-     printf "Press [enter] key to continue\n";
-     read enterkey;
-     ;;
-  e) clear;
-     printf "Exiting...\n";
-     exit 1
-     ;;
+   h) clear;
+      showhelp 
+      printf "Press [enter] key to continue\n";
+      read enterkey;
+      ;;
+   e) clear;
+      printf "Exiting...\n";
+      exit 1
+      ;;
    r) clear;
       get_sap_list
       main_menu
-     ;;
-  1) clear;
-     START=1
-     sap_action;
-     ;;
-  2) clear;
-     START=0
-     sap_action;
-     ;;
+      ;;
+   #版本号
+   v) clear;
+      showversion 
+      printf "Press [enter] key to continue\n";
+      read enterkey;
+      main_menu
+      ;;
   *) clear;
       # 选中的行项目 
       if [ $1 -lt $index ]; then
@@ -801,6 +800,13 @@ function log_action {
    echo "ACTION: $LOG_ACTION     ">>/usr/sap/sap_action.log
    echo "-----------------------------------------------------">>/usr/sap/sap_action.log
 }
+function showversion {
+   printf "|================================Version Infor=================================\n"
+   printf "|                                                                              \n"
+   printf "| V 0.0.1 : 初始化版本                                                          \n"
+   printf "|                                                                              \n"
+   printf "|==============================================================================\n"
+}
 
 ##################################################
 # Help functions
@@ -897,17 +903,16 @@ function main_menu {
    while [ $userchoice != e ]
    do
       clear
-      printf "|==================SAP 维护菜单=================================================\n"
+      printf "|======SAP Maintenance Menu=====================================================\n"
       printf "|                                                                               \n"
-      printf "| 欢迎来到SAP 的世界，欢迎使用本脚本                                                \n"
-      printf "| 本系统仅供个人交流学习，请勿做其他用途！                                           \n"
+      printf "| Welcome to the world of SAP, welcome to use this script                       \n"
+      printf "| This system is for personal communication and learning purposes only.         \n"
+      printf "| Please do not use it for any other purposes!                                  \n"
       printf "|                                                                               \n"
       printf "| h.  Help                                                                      \n"
       printf "| r.  Refresh                                                                   \n"
+      printf "| v.  Version                                                                   \n"
       printf "| e.  Exit                                                                      \n"
-      printf "|                                                                               \n"
-      printf "| 1.  Start || Restart all                                                      \n"
-      printf "| 2.  Shutdown all                                                              \n"
       printf "|                                                                               \n"
       printf "| --------------------SAP Components--------------------------------------------\n"
       printf "|                                                                               \n"
@@ -930,6 +935,7 @@ function main_menu {
 ################################################################################################
 # Added the following for the new Administration Console script name
 export HOSTNAME=`hostname`
+STATUPTIME=$(date -d "$(awk -F. '{print $1}' /proc/uptime) second ago" +"%Y-%m-%d %H:%M:%S")
 ################################################################################################
 # 取消java检测
 #check_java

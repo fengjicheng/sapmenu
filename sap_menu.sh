@@ -1,10 +1,9 @@
+#!/usr/bin/env bash
 # ***************************************************************
 # *                                                             *
 # *                           NOTICE                            *
-# *                     SAP服务器自动启动交互脚本               *
+# *                     SAP服务器自动启动交互脚本                *
 # ***************************************************************
-#!/bin/ksh
-#操作系统判断
 case `uname` in
   Linux)
     case `uname -m` in
@@ -221,17 +220,11 @@ function get_sap_list {
          # 如果SYSTEM_TYPE不为HDB，执行第二行代码
          SAPWORK="/usr/sap/$SID/$InstanceName/work"
       fi
-      # root 用户需要设置环境变量，才能调用sapcontrol
-      # as root user we need the library path to the SAP kernel to be able to call sapcontrol
-      if [ `echo $LD_LIBRARY_PATH | grep -c "^$DIR_EXECUTABLE\>"` -eq 0 ]; then
-         LD_LIBRARY_PATH=$DIR_EXECUTABLE${LD_LIBRARY_PATH:+:}$LD_LIBRARY_PATH
-         export LD_LIBRARY_PATH
-      fi
       local rc='UNKNOWN'
       if [ $SAPSTARTSRV_STATUS="SUCCESS" ]
       then
          local count=0
-         local MONITOR_SERVICES_default="disp+work|TREXDaemon.x|msg_server|enserver|enrepserver|jcontrol|jstart|enq_server|enq_replicator|hdbindexserver|hdbnameserver"
+         local MONITOR_SERVICES_default="disp+work|TREXDaemon.x|msg_server|enserver|enrepserver|jcontrol|jstart|enq_server|enq_replicator|hdbindexserver|hdbnameserver|hdbdaemon"
          local SERVNO
          local output
          output=`su - ${SIDADM} -c "sapcontrol -nr ${InstanceNr} -function GetProcessList -format script"`

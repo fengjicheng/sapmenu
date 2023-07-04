@@ -216,7 +216,7 @@ function get_sap_list {
       if [ "$SYSTEM_TYPE" = "HDB" ]; then
          SAPWORK="/usr/sap/$SID/$InstanceName/$SAPVIRHOST/trace"
          # 如果为HANA 则 启动参数也要改写
-         SAPSTARTPROFILE="/usr/sap/HEX/SYS/global/hdb/custom/config/"
+         SAPSTARTPROFILE="/usr/sap/$SID/SYS/global/hdb/custom/config/"
       else
          # 如果SYSTEM_TYPE不为HDB，执行第二行代码
          SAPWORK="/usr/sap/$SID/$InstanceName/work"
@@ -737,7 +737,41 @@ case $1 in
       read enterkey;
       sub_menu
       ;;
-   # 获得hana版本
+   # 检查java数据库连接
+   95) clear;
+      printf "\n"
+      printf "正在为您检测实例${SID}(${InstanceNr}) 连接状态\n"   
+      printf "正在获得..\n"
+      cd  /usr/sap/${SID}/${InstanceName}/j2ee/configtool > /dev/null
+      output=$(source /usr/sap/${SID}/${InstanceName}/j2ee/configtool/consoleconfig.sh << EOF
+12
+EOF
+)
+      clear
+      printf "\n"
+      printf "您的J2EE实例${SID}(${InstanceNr}) 连接状态为:\n" 
+      printf "$(echo "$output" | grep "Connecting to database")\n"
+      printf "$(echo "$output" | grep "Scanning cluster data")\n"
+      cd  /usr/sap/ > /dev/null
+      printf "\n"
+      sleep 2;
+      printf "Press [enter] key to continue\n";
+      read enterkey;
+      sub_menu
+      ;;
+   # 检查ABAP系统数据库连接
+   96) clear;
+      printf "\n"
+      printf "正在为您检查数据库连接,显示00证明连接正常\n"  
+      su - ${SIDADM} -c "R3trans -dx -w ${SAPWORK}/trans.log"
+      printf "若失败请检查${SAPWORK}/trans.log日志\n"  
+      printf "\n"
+      sleep 2;
+      printf "Press [enter] key to continue\n";
+      read enterkey;
+      sub_menu
+      ;;
+   # 启动Configtool
    97) clear;
       printf "\n"
       printf "正在为您启动Configtool.您的必须使用XHELL等工具\n"  
@@ -833,6 +867,10 @@ function sub_menu {
          printf "| 8.  Get License                                                                \n"
          printf "| 9.  Force Kill                                                                 \n"
          printf "| 10. Check Start Profile                                                        \n"
+         #判断是否为消息服务
+         if [ "$(echo "$InstanceName" | cut -c1)" = "D" ]; then
+            printf "| 96. Check Database Connection                                                  \n"
+         fi
       fi
       if [ "$SYSTEM_TYPE" = "J2EE" ]; then
          printf "| 7.  Cleanipc                                                                   \n"
@@ -841,6 +879,7 @@ function sub_menu {
       fi
       #判断是否为JAVA实例
       if [ "$(echo "$InstanceName" | cut -c1)" = "J" ]; then
+         printf "| 95. Check Database Connection                                                  \n"
          printf "| 97. Run Configtool                                                             \n"
       fi
       if [ "$SYSTEM_TYPE" = "SMDA" ]; then

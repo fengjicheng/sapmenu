@@ -75,7 +75,6 @@ VIRTUALIZATION=""
 VIRTTYPE=""     # full/para
 VIRTDOM=""      # Dom0, DomU
 VIRTPRODUCT=""  # Oracle OVM,Red Hat RHEV,Huawei Fusionsphere, ...
-
 # 1. determine virtualization technology
 virt="`lscpu 2>/dev/null | grep -i 'Hypervisor vendor:' | awk '{print $3}'`"
 case $virt in

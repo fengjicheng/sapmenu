@@ -389,11 +389,15 @@ function check_sapstartsrv {
       # 拼接systemd名字
       local systemd_unit_name="SAP${SID}_${InstanceNr}"
       # 检查systemd 服务
-      if $SYSTEMCTL  status "$systemd_unit_name" 1>/dev/null 2>/dev/null; then
-         log_action "systemd service $systemd_unit_name is active"
+      if "$SYSTEMCTL" is-active --quiet "$systemd_unit_name"; then
+         log_action "ACT:systemd service $systemd_unit_name is active"
       else
-         log_action "systemd service $systemd_unit_name is not active, it will be started using systemd"
-         $SYSTEMCTL start "$systemd_unit_name" 1>/dev/null 2>/dev/null
+         log_action "ACT:systemd service $systemd_unit_name is not active, it will be started using systemd"
+         "$SYSTEMCTL" start "$systemd_unit_name" >/dev/null 2>&1; src=$?
+         if [[ "$src" != 0 ]]; then
+               log_action "ACT: error during start of systemd unit ${systemd_unit_name}!"
+               return 1
+         fi
          # use start, because restart does also stop sap instance
       fi
       return 0
@@ -402,63 +406,62 @@ function check_sapstartsrv {
       if [ ! -S /tmp/.sapstream5${InstanceNr}13 ]; then
          log_action "sapstartsrv is not running for instance $SID-$InstanceName (no UDS), it will be started now"
          restart=1
-         else
-            output=`su - ${SIDADM} -c "sapcontrol -nr ${InstanceNr}  -function ParameterValue INSTANCE_NAME -format script"`
-            if [ $? -eq 0 ]
-            then
-               runninginst=`echo "$output" | grep '^0 : ' | cut -d' ' -f3`
-               if [ "$runninginst" != "$InstanceName" ]
-               then
-                  log_action "sapstartsrv is running for instance $runninginst, that service will be killed"
-                  restart=1
-               else
-                  output=`su - ${SIDADM} -c "sapcontrol -nr ${InstanceNr}  -function AccessCheck Start"`
-                  if [ $? -ne 0 ]; then
-                     log_action "FAILED : sapcontrol -nr $InstanceNr -function AccessCheck Start (`ls -ld1 /tmp/.sapstream5${InstanceNr}13`)"
-                     log_action "sapstartsrv will be restarted to try to solve this situation, otherwise please check sapstsartsrv setup (SAP Note 927637)"
-                     restart=1
-                  fi
-               fi
-            else
-               log_action "sapstartsrv is not running for instance $SID-$InstanceName, it will be started now"
-               restart=1
-            fi
-         fi
-
-         if [ -z "$runninginst" ]; then runninginst=$InstanceName; fi
-         #判断sapstartsrv 是否重启
-         if [ $restart -eq 1 ]
+      else
+         output=`su - ${SIDADM} -c "sapcontrol -nr ${InstanceNr}  -function ParameterValue INSTANCE_NAME -format script"`
+         if [ $? -eq 0 ]
          then
-            pkill -9 -f "sapstartsrv.*$runninginst"
-
-            # removing the unix domain socket files as they might have wrong permissions
-            # or ownership - they will be recreated by sapstartsrv during next start
-            rm -f /tmp/.sapstream5${InstanceNr}13
-            rm -f /tmp/.sapstream5${InstanceNr}14
-
-            $SAPSTARTSRV pf=$SAPSTARTPROFILE -D -u $sidadm
-
-            # now make sure the daemon has been started and is able to respond
-            local srvrc=1
-            while [ $srvrc -eq 1 -a `pgrep -f "sapstartsrv.*$runninginst" | wc -l` -gt 0 ]
-            do
-               sleep 1
-               su - ${SIDADM} -c "sapcontrol -nr ${InstanceNr} -function GetProcessList  > /dev/null 2>&1"
-               srvrc=$?
-            done
-
-            if [ $srvrc -ne 1 ]
+            runninginst=`echo "$output" | grep '^0 : ' | cut -d' ' -f3`
+            if [ "$runninginst" != "$InstanceName" ]
             then
-               log_action "sapstartsrv for instance $SID-$InstanceName was restarted !"
-               # 启动成功
-               chkrc=0
+               log_action "sapstartsrv is running for instance $runninginst, that service will be killed"
+               restart=1
             else
-               log_action "sapstartsrv for instance $SID-$InstanceName could not be started!"
-               #启动失败
-               chkrc=1
+               output=`su - ${SIDADM} -c "sapcontrol -nr ${InstanceNr}  -function AccessCheck Start"`
+               if [ $? -ne 0 ]; then
+                  log_action "FAILED : sapcontrol -nr $InstanceNr -function AccessCheck Start (`ls -ld1 /tmp/.sapstream5${InstanceNr}13`)"
+                  log_action "sapstartsrv will be restarted to try to solve this situation, otherwise please check sapstsartsrv setup (SAP Note 927637)"
+                  restart=1
+               fi
             fi
+         else
+            log_action "sapstartsrv is not running for instance $SID-$InstanceName, it will be started now"
+            restart=1
          fi
+      fi
 
+      if [ -z "$runninginst" ]; then runninginst=$InstanceName; fi
+      #判断sapstartsrv 是否重启
+      if [ $restart -eq 1 ]
+      then
+         pkill -9 -f "sapstartsrv.*$runninginst"
+
+         # removing the unix domain socket files as they might have wrong permissions
+         # or ownership - they will be recreated by sapstartsrv during next start
+         rm -f /tmp/.sapstream5${InstanceNr}13
+         rm -f /tmp/.sapstream5${InstanceNr}14
+
+         $SAPSTARTSRV pf=$SAPSTARTPROFILE -D -u $sidadm
+
+         # now make sure the daemon has been started and is able to respond
+         local srvrc=1
+         while [ $srvrc -eq 1 -a `pgrep -f "sapstartsrv.*$runninginst" | wc -l` -gt 0 ]
+         do
+            sleep 1
+            su - ${SIDADM} -c "sapcontrol -nr ${InstanceNr} -function GetProcessList  > /dev/null 2>&1"
+            srvrc=$?
+         done
+
+         if [ $srvrc -ne 1 ]
+         then
+            log_action "sapstartsrv for instance $SID-$InstanceName was restarted !"
+            # 启动成功
+            chkrc=0
+         else
+            log_action "sapstartsrv for instance $SID-$InstanceName could not be started!"
+            #启动失败
+            chkrc=1
+         fi
+      fi
       return "$chkrc"
    fi
 }
@@ -517,55 +520,55 @@ function cleanup_instance {
 # 菜单动作
 #######################################
 function run_action {
-case $1 in
-   h) clear;
-      showhelp 
-      printf "Press [enter] key to continue\n";
-      read enterkey;
-      ;;
-   e) clear;
-      printf "Exiting...\n";
-      exit 1
-      ;;
-   r) clear;
-      get_sap_list
-      main_menu
-      ;;
-   #版本号
-   v) clear;
-      showversion 
-      printf "Press [enter] key to continue\n";
-      read enterkey;
-      main_menu
-      ;;
-  *) clear;
-      # 选中的行项目 
-      if [ $1 -lt $index ]; then
-         SID=${profile_info["$1,SID"]}
-         InstanceName=${profile_info["$1,InstanceName"]}
-         InstanceNr=${profile_info["$1,InstanceNr"]}
-         SAPVIRHOST=${profile_info["$1,SAPVIRHOST"]}
-         SIDADM=${profile_info["$1,SIDADM"]}
-         DIR_PROFILE=${profile_info["$1,DIR_PROFILE"]}
-         SAPSTARTPROFILE=${profile_info["$1,SAPSTARTPROFILE"]}
-         SAPSTARTSRV_STATUS=${profile_info["$1,SAPSTARTSRV_STATUS"]}
-         DIR_EXECUTABLE=${profile_info["$1,DIR_EXECUTABLE"]}
-         SAPSTARTSRV=${profile_info["$1,SAPSTARTSRV"]}
-         SAPCONTROL=${profile_info["$1,SAPCONTROL"]}
-         STATUS=${profile_info["$1,STATUS"]}
-         SAPWORK=${profile_info["$1,SAPWORK"]}
-         SYSTEM_TYPE=${profile_info["$1,SYSTEM_TYPE"]}
-         # 子界面可获得如上信息
-         sub_menu
-      else
-         printf "Invalid option.\n";
-         sleep 2;
+   case $1 in
+      h) clear;
+         showhelp 
          printf "Press [enter] key to continue\n";
          read enterkey;
-         main_menu;
-      fi
-      ;;
-esac
+         ;;
+      e) clear;
+         printf "Exiting...\n";
+         exit 1
+         ;;
+      r) clear;
+         get_sap_list
+         main_menu
+         ;;
+      #版本号
+      v) clear;
+         showversion 
+         printf "Press [enter] key to continue\n";
+         read enterkey;
+         main_menu
+         ;;
+   *) clear;
+         # 选中的行项目 
+         if [ $1 -lt $index ]; then
+            SID=${profile_info["$1,SID"]}
+            InstanceName=${profile_info["$1,InstanceName"]}
+            InstanceNr=${profile_info["$1,InstanceNr"]}
+            SAPVIRHOST=${profile_info["$1,SAPVIRHOST"]}
+            SIDADM=${profile_info["$1,SIDADM"]}
+            DIR_PROFILE=${profile_info["$1,DIR_PROFILE"]}
+            SAPSTARTPROFILE=${profile_info["$1,SAPSTARTPROFILE"]}
+            SAPSTARTSRV_STATUS=${profile_info["$1,SAPSTARTSRV_STATUS"]}
+            DIR_EXECUTABLE=${profile_info["$1,DIR_EXECUTABLE"]}
+            SAPSTARTSRV=${profile_info["$1,SAPSTARTSRV"]}
+            SAPCONTROL=${profile_info["$1,SAPCONTROL"]}
+            STATUS=${profile_info["$1,STATUS"]}
+            SAPWORK=${profile_info["$1,SAPWORK"]}
+            SYSTEM_TYPE=${profile_info["$1,SYSTEM_TYPE"]}
+            # 子界面可获得如上信息
+            sub_menu
+         else
+            printf "Invalid option.\n";
+            sleep 2;
+            printf "Press [enter] key to continue\n";
+            read enterkey;
+            main_menu;
+         fi
+         ;;
+   esac
 }
 #######################################
 # Component Sub Menu Actions
@@ -788,6 +791,19 @@ EOF
       read enterkey;
       sub_menu
       ;;
+   #获得Log
+   99) clear;
+      printf "\n"
+      printf "您的实例${SID}(${InstanceNr}) 可收集的日志列表为\n"
+      printf "|================================log list======================================\n"
+      su - ${SIDADM} -c "sapcontrol -nr ${InstanceNr} -function ListLogFiles -format script" | awk  -v sid="${SID}" -v instance="${InstanceName}"  'BEGIN{FS=": "} /filename:/{filename=$2} /size:/{size=$2; printf "| filename :/usr/sap/%s/%s/%s  size: %s\n", sid, instance, filename, size}'
+      printf "|==============================================================================\n"   
+      printf "\n"
+      sleep 2;
+      printf "Press [enter] key to continue\n";
+      read enterkey;
+      sub_menu
+      ;;
   *) clear;
      printf "Invalid option.\n";
      sleep 2;
@@ -829,7 +845,6 @@ function showhelp {
    printf "|                                                                              \n"
    printf "|==============================================================================\n"
 }
-
 ###################################################
 # Sub Menu for components
 ###################################################
@@ -847,7 +862,11 @@ function sub_menu {
       printf "| %-15s%-10s %-22s%-10s %-16s%-15s\n" "System ID:" ${SID} "Instance Number:" ${InstanceNr}  "Service Account:" ${SIDADM}
       printf "| %-15s%-10s %-22s%-10s %-16s%-15s\n" "Instance Name:" ${InstanceName} "Start Service Status:" ${SAPSTARTSRV_STATUS} "Status:" ${STATUS} 
       printf "| %-15s%-40s\n" "Work Log:" ${SAPWORK} 
-      printf "| %-15s%-40s\n" "Startp Profile:" ${SAPSTARTPROFILE} 
+      printf "| %-15s%-40s\n" "Startup Profile:" ${SAPSTARTPROFILE} 
+      if [ "$STATUS" = "SUCCESS" ]; then
+
+         printf "| %-15s%-40s\n" "Startup Time:" ${SAPSTARTPROFILE} 
+      fi
       printf "|===================================================================================\n"
       printf "| 1.  Start                                                                         \n"
       printf "| 2.  Restart                                                                       \n"

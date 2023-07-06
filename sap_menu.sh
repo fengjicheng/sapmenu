@@ -75,6 +75,7 @@ VIRTUALIZATION=""
 VIRTTYPE=""     # full/para
 VIRTDOM=""      # Dom0, DomU
 VIRTPRODUCT=""  # Oracle OVM,Red Hat RHEV,Huawei Fusionsphere, ...
+
 # 1. determine virtualization technology
 virt="`lscpu 2>/dev/null | grep -i 'Hypervisor vendor:' | awk '{print $3}'`"
 case $virt in
@@ -863,8 +864,11 @@ function sub_menu {
       printf "| %-15s%-40s\n" "Work Log:" ${SAPWORK} 
       printf "| %-15s%-40s\n" "Startup Profile:" ${SAPSTARTPROFILE} 
       if [ "$STATUS" = "SUCCESS" ]; then
-
-         printf "| %-15s%-40s\n" "Startup Time:" ${SAPSTARTPROFILE} 
+         sapstartuptime=$(su - ${SIDADM} -c "sapcontrol -nr ${InstanceNr} -function GetProcessList -format script | grep -E -A 4 'jstart|disp\\+work|hdbnameserver|enserver|TREXDaemon\.x' | grep 'starttime' | awk -F 'starttime:' '{print \$2}'")
+         formatted_date=$(date -d "$(echo "$sapstartuptime" | awk '{print $1"-"$2"-"$3" "$4}')")
+         formatted_date=$(date -d "$formatted_date" +"%Y/%m/%d %H:%M:%S")
+         printf "| %-15s" "Startup Time:" 
+         printf "${formatted_date}\n"
       fi
       printf "|===================================================================================\n"
       printf "| 1.  Start                                                                         \n"

@@ -733,6 +733,23 @@ case $1 in
       read enterkey;
       sub_menu
       ;;
+   # 显示实例数据
+   94) clear;
+      printf "\n"
+      printf "|================================================================================================\n"
+      printf "| ${SID}(${InstanceNr}) Monitor Workp Pocess Table\n"  
+      printf "|================================================================================================\n"
+      local output
+      output=`su - ${SIDADM} -c "sapcontrol -nr ${InstanceNr} -function ABAPGetWPTable"`
+      output=$(echo "$output" | awk -F, 'NR>4 {printf "| %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n", $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15}')
+      printf "${output}\n" 
+      printf "|================================================================================================\n"
+      printf "\n"
+      sleep 2;
+      printf "Press [enter] key to continue\n";
+      read enterkey;
+      sub_menu
+      ;;
    # 检查java数据库连接
    95) clear;
       printf "\n"
@@ -835,6 +852,7 @@ function showversion {
 function showhelp {
    printf "|====================================帮助文档===================================\n"
    printf "|                                                                              \n"
+   printf "| https://github.com/fengjicheng/sapmenu/                                      \n"
    printf "| 此工具为SHELL 调用sapcontrol来启动停止SAP服务，如在启停中遇到问题请检查相应日     \n"
    printf "| 志文件，或者联系作者： 冯际成  手机号 15209793953 Email： 604756218@qq.com      \n"
    printf "|                                                                              \n"
@@ -884,6 +902,7 @@ function sub_menu {
          printf "| 10. Check Start Profile                                                        \n"
          #判断是否为消息服务
          if [ "$(echo "$InstanceName" | cut -c1)" = "D" ]; then
+            printf "| 94. Monitor Workp Pocess Table                                                 \n"
             printf "| 96. Check Database Connection                                                  \n"
          fi
       fi

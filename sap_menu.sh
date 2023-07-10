@@ -4,102 +4,110 @@
 # *                           NOTICE                            *
 # *                     SAP服务器自动启动交互脚本                *
 # ***************************************************************
-case `uname` in
-  Linux)
-    case `uname -m` in
-      ia64)  
-        _PLATFORM=linuxia64
-        ;;
-      x86_64)  
-        _PLATFORM=linuxx86_64
-        ;;
-      s390x)  
-        _PLATFORM=linuxs390x
-        ;;
-      ppc64)  
-        _PLATFORM=linuxppc64
-        ;;
-      i686|i386)
-        _PLATFORM=linuxintel
-        ;;
-      *)
-        _PLATFORM=linuxintel
-        ;;
-    esac
-    ;;
+# set -eu -o pipefail
+function get_platform {
+	local _PLATFORM="unknown"
+	case `uname` in
+	Linux)
+		case `uname -m` in
+		  ia64)  
+			_PLATFORM="linuxia64"
+			;;
+		  x86_64)  
+			_PLATFORM="linuxx86_64"
+			;;
+		  s390x)  
+			_PLATFORM="linuxs390x"
+			;;
+		  ppc64)  
+			_PLATFORM="linuxppc64"
+			;;
+		  i686|i386)
+			_PLATFORM="linuxintel"
+			;;
+		  *)
+			_PLATFORM="linuxintel"
+			;;
+		esac
+		;;
 
-  AIX*)
-    _PLATFORM=rs6000_64
-    ;;
+	AIX*)
+		_PLATFORM="rs6000_64"
+		;;
 
-  Sun*)
-    case `uname -m` in
-      sun4u*)
-        _PLATFORM=sun_64
-        ;;
-      i86pc)
-        _PLATFORM=sunx86_64
-        ;;
-      *)
-        _PLATFORM=sun_64
-        ;;
-    esac
-    ;;
+	Sun*)
+		case `uname -m` in
+		  sun4u*)
+			_PLATFORM="sun_64"
+			;;
+		  i86pc)
+			_PLATFORM="sunx86_64"
+			;;
+		  *)
+			_PLATFORM="sun_64"
+			;;
+		esac
+		;;
 
-  HP*)
-    case `uname -m` in
-      ia64)
-        _PLATFORM=hpia64
-        ;;
-      *)
-        _PLATFORM=hp_64
-        ;;
-    esac
-    ;;
+	HP*)
+		case `uname -m` in
+		  ia64)
+			_PLATFORM="hpia64"
+			;;
+		  *)
+			_PLATFORM="hp_64"
+			;;
+		esac
+		;;
 
-  OSF*)
-    _PLATFORM=alphaosf
-    ;;
+	OSF*)
+		_PLATFORM="alphaosf"
+		;;
 
-  OS/390*)
-    _PLATFORM=os390
-    ;;
+	OS/390*)
+		_PLATFORM="os390"
+		;;
 
-  *)
-    _PLATFORM=os390
-    ;;
+	*)
+		_PLATFORM="os390"
+		;;
 
-esac 
+	esac 
+	
+	return _PLATFORM
+	
+}
 #虚拟化环境判断
-VIRTUALIZATION=""
-VIRTTYPE=""     # full/para
-VIRTDOM=""      # Dom0, DomU
-VIRTPRODUCT=""  # Oracle OVM,Red Hat RHEV,Huawei Fusionsphere, ...
+function get_virt {
+	local VIRTUALIZATION=""
+	local VIRTPRODUCT=""  # Oracle OVM,Red Hat RHEV,Huawei Fusionsphere, ...
 
-# 1. determine virtualization technology
-virt="`lscpu 2>/dev/null | grep -i 'Hypervisor vendor:' | awk '{print $3}'`"
-case $virt in
-   "VMware")
-     VIRTUALIZATION=ESX
-     VIRTPRODUCT=VMware
-     ;;
-   "KVM")
-     VIRTUALIZATION=KVM
-     #VIRTPRODUCT=KVM
-     ;;
-   "Xen")
-     VIRTUALIZATION=Xen
-     #VIRTPRODUCT=Xen
-     ;;
-   "Microsoft")
-     VIRTUALIZATION=HyperV
-     VIRTPRODUCT=Microsoft
-     ;;
-   "pHyp")
-     VIRTUALIZATION=pHyp
-     VIRTPRODUCT=IBM
-     ;;
-esac
+	# 1. determine virtualization technology
+	local virt="`lscpu 2>/dev/null | grep -i 'Hypervisor vendor:' | awk '{print $3}'`"
+	case $virt in
+	   "VMware")
+		 VIRTUALIZATION=ESX
+		 VIRTPRODUCT=VMware
+		 ;;
+	   "KVM")
+		 VIRTUALIZATION=KVM
+		 #VIRTPRODUCT=KVM
+		 ;;
+	   "Xen")
+		 VIRTUALIZATION=Xen
+		 #VIRTPRODUCT=Xen
+		 ;;
+	   "Microsoft")
+		 VIRTUALIZATION=HyperV
+		 VIRTPRODUCT=Microsoft
+		 ;;
+	   "pHyp")
+		 VIRTUALIZATION=pHyp
+		 VIRTPRODUCT=IBM
+		 ;;
+	esac
+}
+
 
 
 ######################################
@@ -110,15 +118,15 @@ esac
 # 验证JAVA环境变量
 ######################################
 function check_java {
-if [[ $JAVA_HOME = "" ]]
-then
-   clear
-   printf "The JAVA_HOME variable must be set when running this script to avoid start-up errors.\n"
-   printf "Please rerun this script after setting JAVA_HOME and adding it to the PATH variable.\n"
-   printf "Exiting...\n"
-   sleep 2
-   exit 1
-fi
+	if [[ $JAVA_HOME = "" ]]
+	then
+	   clear
+	   printf "The JAVA_HOME variable must be set when running this script to avoid start-up errors.\n"
+	   printf "Please rerun this script after setting JAVA_HOME and adding it to the PATH variable.\n"
+	   printf "Exiting...\n"
+	   sleep 2
+	   exit 1
+	fi
 }
 #检测当前用户
 function check_user {

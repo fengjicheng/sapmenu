@@ -741,6 +741,20 @@ case $1 in
       read enterkey;
       sub_menu
       ;;
+   # 显示SR实例数据
+   93) clear;
+      printf "\n"
+      printf "|================================================================================================\n"
+      printf "| ${SID}(${InstanceNr}) Replication Status \n"  
+      printf "|================================================================================================\n"
+      get_replication_status
+      printf "|================================================================================================\n"
+      printf "\n"
+      sleep 2;
+      printf "Press [enter] key to continue\n";
+      read enterkey;
+      sub_menu
+      ;;
    # 显示实例数据
    94) clear;
       printf "\n"
@@ -838,6 +852,32 @@ EOF
      ;;
 esac
 }
+# sr 状态获得
+function get_replication_status {
+   replication=$(su - "${SIDADM}" -c "hdbnsutil -sr_state" 2>/dev/null | awk '/mode:/ { print $2 }' | head -1)
+   if [ -n "${replication}" ]; then
+      if [ "${replication}" != "none" ] && [ "${STATUS}" == "SUCCESS" ]; then
+         var_hdbcons_replication=$(su - ${SIDADM} -c "hdbcons 'replication i'")
+         var_replication_status=`echo "$var_hdbcons_replication" | awk -F' : ' '/\<ReplicationStatus\>/{ print $2 }' | tail -1 | awk -F"_" '{ print $2}' | sed -e 's/^[[:space:]]*//'`
+         var_replication_status_details=`echo "$var_hdbcons_replication" | awk -F' : ' '/\<ReplicationStatusDetails\>/{ print $2 }' | tail -1 | awk -F"_" '{ print $2}' | sed -e 's/^[[:space:]]*//'`
+         var_full_sync_status=`echo "$var_hdbcons_replication" | awk -F' : ' '/\<ReplicationFullSync\>/ { print $2 }' | sed -e 's/^[[:space:]]*//' | tail -1`
+         var_replicationmode=`echo "$var_hdbcons_replication" | awk -F' : ' '/\<ReplicationMode\>/ { print $2 }' | sed -e 's/^[[:space:]]*//' | tail -1`
+         var_operationmode=`echo "$var_hdbcons_replication" | awk -F' : ' '/\<OperationMode\>/ { print $2 }' | sed -e 's/^[[:space:]]*//' | tail -1`
+         if [ -n "${var_full_sync_status}" ] && [ -n "${var_replication_status_details}" ] && [ -n "${var_replication_status}" ]; then
+            printf "| HANA Replication Mode: ${replication} - Status: ${var_replication_status} - Details: ${var_replication_status_details} - fullsync: ${var_full_sync_status}\n" 
+			elif [ -n "${var_full_sync_status}" ] && [ -n "${var_replication_status}" ]; then
+				printf "| HANA Replication Mode: ${replication} - Status: ${var_replication_status} - fullsync: ${var_full_sync_status}\n" 
+			else
+            printf "| FULLSYNC status couldn't be identified. Please check manually!\n" 
+            printf "| HANA Replication: FULLSYNC status couldn't be identified. Please check manually!\n" 
+            printf "| Replication Mode: ${replication}\n" 
+			fi
+      else
+         printf "| Replication Mode: ${replication}\n"   
+      fi
+   fi
+}
+   
 ##################################################
 # Logging functions
 ##################################################
@@ -930,6 +970,7 @@ function sub_menu {
          printf "| 10. Check Start Profile                                                        \n"
       fi
       if [ "$SYSTEM_TYPE" = "HDB" ]; then
+         printf "| 93. Get Replication Status                                                     \n"
          printf "| 98. Get HDB Version                                                            \n"
       fi
       printf "| 99. Collect logs                                                                  \n"

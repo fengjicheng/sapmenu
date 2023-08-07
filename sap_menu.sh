@@ -5,6 +5,11 @@
 # *                     SAP服务器自动启动交互脚本                *
 # ***************************************************************
 # set -eu -o pipefail
+# 获得当前路径
+readonly base_dir=$(cd `dirname "$0"`; pwd)
+# 定义标准日志文件名称
+readonly log_file="${base_dir}/$(date +%Y-%m-%d)-sap_action.log"
+
 function get_platform {
 	local _PLATFORM="unknown"
 	case `uname` in
@@ -882,9 +887,9 @@ function get_replication_status {
 # Logging functions
 ##################################################
 function log_action {
-   echo "`date '+%Y-%m-%d %T'`">>/usr/sap/sap_action.log
-   echo "  $1     ">>/usr/sap/sap_action.log
-   echo "-----------------------------------------------------">>/usr/sap/sap_action.log
+   echo "`date '+%Y-%m-%d %T'`">>${log_file}
+   echo "  $1     ">>${log_file}
+   echo "-----------------------------------------------------">>${log_file}
 }
 function showversion {
    printf "|================================Version Infor=================================\n"

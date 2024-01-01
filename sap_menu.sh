@@ -6,6 +6,9 @@
 # ***************************************************************
 # set -eu -o pipefail
 # 获得当前路径
+
+__time=$(date)
+__date=$(echo $__time | awk '{ printf "%s",$3$2$6"/"$4 ; }')
 readonly base_dir=$(cd `dirname "$0"`; pwd)
 # 定义标准日志文件名称
 readonly log_file="${base_dir}/$(date +%Y-%m-%d)-sap_action.log"

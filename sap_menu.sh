@@ -938,8 +938,8 @@ function sub_menu {
       printf "| %-15s%-40s\n" "Work Log:" ${SAPWORK} 
       printf "| %-15s%-40s\n" "Startup Profile:" ${SAPSTARTPROFILE} 
       if [ "$STATUS" = "SUCCESS" ]; then
-         sapstartuptime=$(su - ${SIDADM} -c "sapcontrol -nr ${InstanceNr} -function GetProcessList -format script | grep -E -A 4 'jstart|disp\\+work|hdbnameserver|enserver|TREXDaemon\.x' | grep 'starttime' | awk -F 'starttime:' '{print \$2}'")
-         formatted_date=$(date -d "$(echo "$sapstartuptime" | awk '{print $1"-"$2"-"$3" "$4}')")
+         sapstartuptime=$(su - ${SIDADM} -c "sapcontrol -nr ${InstanceNr} -function GetProcessList -format script | grep -E -A 4 'jstart|disp\+work|hdbnameserver|enserver|TREXDaemon\.x' | grep 'starttime'")
+         formatted_date=$(date -d "$(echo "$sapstartuptime" | awk '{print $3"-"$4"-"$5" "$6}')")
          formatted_date=$(date -d "$formatted_date" +"%Y/%m/%d %H:%M:%S")
          printf "| %-15s" "Startup Time:" 
          printf "${formatted_date}\n"

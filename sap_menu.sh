@@ -173,7 +173,7 @@ declare -A profile_info
 function get_sap_list {
    clear
    printf "Loading...\n"
-   PROFILES=$(ls -1 /usr/sap/???/SYS/profile/???_*_* | grep -vE '\.[0-9]|\.old|\_check|\.log\.back|\.backup|dev_' 2>/dev/null)
+   PROFILES=$(ls -1 /usr/sap/???/SYS/profile/???_*_* | grep -vE '\.[0-9]|\.old|\_check|\.log\.back*|\.backup|dev_' 2>/dev/null)
    index=1
    for PROFILE in $PROFILES; do
       # profile suddenly disappeared?
@@ -939,8 +939,7 @@ function sub_menu {
       printf "| %-15s%-40s\n" "Startup Profile:" ${SAPSTARTPROFILE} 
       if [ "$STATUS" = "SUCCESS" ]; then
          sapstartuptime=$(su - ${SIDADM} -c "sapcontrol -nr ${InstanceNr} -function GetProcessList -format script | grep -E -A 4 'jstart|disp\+work|hdbnameserver|enserver|TREXDaemon\.x' | grep 'starttime'")
-         formatted_date=$(date -d "$(echo "$sapstartuptime" | awk '{print $3"-"$4"-"$5" "$6}')")
-         formatted_date=$(date -d "$formatted_date" +"%Y/%m/%d %H:%M:%S")
+         formatted_date=$(echo "$sapstartuptime" | awk '{print $3"/"$4"/"$5" "$6}')
          printf "| %-15s" "Startup Time:" 
          printf "${formatted_date}\n"
       fi

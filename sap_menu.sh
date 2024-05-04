@@ -593,9 +593,10 @@ function run_action {
 function run_sub_action {
 case $1 in
   e) clear;
-      printf "Exiting...\n";
-      exit 1
-      ;;
+		log_action "Exiting sap_menu.sh "
+		printf "Exiting...\n";
+		exit 1
+		;;
   m) clear;
       get_sap_list
       main_menu;

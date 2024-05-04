@@ -11,8 +11,9 @@ __time=$(date)
 __date=$(echo $__time | awk '{ printf "%s",$3$2$6"/"$4 ; }')
 readonly base_dir=$(cd `dirname "$0"`; pwd)
 # 定义标准日志文件名称
-readonly log_file="${base_dir}/$(date +%Y-%m-%d)-sap_action.log"
+readonly log_file="${base_dir}/$(date +%Y_%m_%d)_sap_action.log"
 
+# 获得系统版本函数
 function get_platform {
 	local _PLATFORM="unknown"
 	case `uname` in
@@ -294,7 +295,7 @@ function check_sap_env {
    if [ ! -f "/usr/sap/sapservices" ]
    then
       clear
-      printf "请确定您是否已经安装了SAP系统\n"
+      printf "Please confirm if you have installed the SAP system\n"
       printf "Exiting...\n"
       sleep 2
       exit 1

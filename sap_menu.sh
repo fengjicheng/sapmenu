@@ -996,29 +996,29 @@ function sub_menu {
 # Main Menu
 ###################################################
 function main_menu {
-   clear
-   userchoice=0
-   while [ $userchoice != e ]
-   do
-      clear
-      printf "|======SAP Maintenance Menu=========================================================\n"
-      printf "| Welcome to the world of SAP, welcome to use this script                           \n"
-      printf "| This system is for personal communication and learning purposes only.             \n"
-      printf "| Please do not use it for any other purposes!                                      \n"
-      printf "| h.  Help                                                                          \n"
-      printf "| r.  Refresh                                                                       \n"
-      printf "| v.  Version                                                                       \n"
-      printf "| e.  Exit                                                                          \n"
-      printf "| --------------------SAP Components------------------------------------------------\n"
-      printf "|     %-5s %-12s %-10s %-6s %-15s %-12s %-8s\n" "SID" "InstanceName" "InstanceNr" "Type" "SAPVIRHOST"  "SAPSTARTSRV" "Status"
-      for ((i = 1; i < index; i++)); do
-         printf "| %-2s. %-5s %-12s %-10s %-6s %-15s %-12s %-8s\n" $i "${profile_info["$i,SID"]}" "${profile_info["$i,InstanceName"]}" "${profile_info["$i,InstanceNr"]}" "${profile_info["$i,SYSTEM_TYPE"]}" "${profile_info["$i,SAPVIRHOST"]}" "${profile_info["$i,SAPSTARTSRV_STATUS"]}" "${profile_info["$i,STATUS"]}"
-      done
-      printf "|===================================================================================\n"
-      printf "Please enter your selection and press <Enter>\n" 
-      read userchoice
-      run_action $userchoice
-   done
+    clear
+    userchoice=0
+    while [ $userchoice != e ]
+    do
+		clear
+		printf "|======SAP Maintenance Menu=========================================================\n"
+		printf "| Welcome to the world of SAP, welcome to use this script                           \n"
+		printf "| This system is for personal communication and learning purposes only.             \n"
+		printf "| Please do not use it for any other purposes!                                      \n"
+		printf "| h.  Help                                                                          \n"
+		printf "| r.  Refresh                                                                       \n"
+		printf "| v.  Version                                                                       \n"
+		printf "| e.  Exit                                                                          \n"
+		printf "| --------------------SAP Components------------------------------------------------\n"
+		printf "|     %-5s %-12s %-10s %-6s %-15s %-12s %-8s\n" "SID" "InstanceName" "InstanceNr" "Type" "SAPVIRHOST"  "SAPSTARTSRV" "Status"
+		for ((i = 1; i < index; i++)); do
+			printf "| %-2s. %-5s %-12s %-10s %-6s %-15s %-12s %-8s\n" $i "${profile_info["$i,SID"]}" "${profile_info["$i,InstanceName"]}" "${profile_info["$i,InstanceNr"]}" "${profile_info["$i,SYSTEM_TYPE"]}" "${profile_info["$i,SAPVIRHOST"]}" "${profile_info["$i,SAPSTARTSRV_STATUS"]}" "${profile_info["$i,STATUS"]}"
+		done
+		printf "|===================================================================================\n"
+		printf "Please enter your selection and press <Enter>\n" 
+		read userchoice
+		run_action $userchoice
+    done
 }
 
 ############################
@@ -1027,7 +1027,13 @@ function main_menu {
 ################################################################################################
 # Added the following for the new Administration Console script name
 export HOSTNAME=`hostname`
+# 系统启动时间
 STATUPTIME=$(date -d "$(awk -F. '{print $1}' /proc/uptime) second ago" +"%Y-%m-%d %H:%M:%S")
+# 用户ip地址
+USER_IP=$(who -u am i 2>/dev/null| awk '{print $NF}'|sed -e 's/[()]//g')
+if [ "$USER_IP" = "" ]; then
+	USER_IP=`hostname`
+fi
 SAPHOSTCTRL="/usr/sap/hostctrl/exe/saphostctrl"
 SAPHOSTEXEC="/usr/sap/hostctrl/exe/saphostexec"
 SAPHOSTSRV="/usr/sap/hostctrl/exe/sapstartsrv"
@@ -1035,6 +1041,8 @@ SAPHOSTOSCOL="/usr/sap/hostctrl/exe/saposcol"
 ################################################################################################
 # 取消java检测
 #check_java
+log_action "Starting sap_menu.sh "
+log_action "Run Ip $USER_IP "
 check_user
 check_sap_env
 get_sap_list

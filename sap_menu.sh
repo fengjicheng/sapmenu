@@ -2,7 +2,7 @@
 # ***************************************************************
 # *                                                             *
 # *                           NOTICE                            *
-# *                     SAP服务器自动启动交互脚本                *
+# *        SAP Server Instance START-STOP Script                *
 # ***************************************************************
 # set -eu -o pipefail
 # 获得当前路径
@@ -12,6 +12,44 @@ __date=$(echo $__time | awk '{ printf "%s",$3$2$6"/"$4 ; }')
 readonly base_dir=$(cd `dirname "$0"`; pwd)
 # 定义标准日志文件名称
 readonly log_file="${base_dir}/$(date +%Y_%m_%d)_sap_action.log"
+
+
+function info() {
+    echo -e "\033[37m $*\033[0m"
+}
+
+function warning() {
+    echo -e "\033[33m $*\033[0m"
+}
+
+function abort() {
+   echo -e "\033[31m $*\033[0m"
+   exit 1
+}
+
+
+#
+#        if confirm "是否需要自动升级 Docker Compose Plugin"; then
+#            install_docker_compose
+#        else
+#            abort "中止安装"
+#        fi
+#
+#
+
+# 提示对话框
+function confirm() {
+   echo -e -n "\033[36m[sap_menu] $* \033[1;36m(Y/n)\033[0m"
+   read -n 1 -s opt
+
+   [[ "$opt" == $'\n' ]] || echo
+
+   case "$opt" in
+   'y' | 'Y') return 0 ;;
+   'n' | 'N') return 1 ;;
+   *) confirm "$1" ;;
+   esac
+}
 
 # 获得系统版本函数
 function get_platform {
@@ -174,7 +212,7 @@ declare -A profile_info
 function get_sap_list {
    clear
    printf "Loading...\n"
-   PROFILES=$(ls -1 /usr/sap/???/SYS/profile/???_*_* | grep -vE '\.[0-9]|\.old|\_check|\.log\.back*|\.backup|dev_' 2>/dev/null)
+   PROFILES=$(ls -1 /usr/sap/???/SYS/profile/???_*_* | grep -vE '\.[0-9]$|\.old$|_check$|\.log\.backup$|\.backup$|dev_|\.bak$' 2>/dev/null)
    index=1
    for PROFILE in $PROFILES; do
       # profile suddenly disappeared?
@@ -540,12 +578,11 @@ function run_action {
    case $1 in
       h) clear;
          showhelp 
-         printf "Press [enter] key to continue\n";
+         info "Press [enter] key to continue\n";
          read enterkey;
          ;;
       e) clear;
-         printf "Exiting...\n";
-         exit 1
+         abort "Exiting...\n";
          ;;
       r) clear;
          get_sap_list
@@ -554,7 +591,7 @@ function run_action {
       #版本号
       v) clear;
          showversion 
-         printf "Press [enter] key to continue\n";
+         info "Press [enter] key to continue\n";
          read enterkey;
          main_menu
          ;;
@@ -580,7 +617,7 @@ function run_action {
          else
             printf "Invalid option.\n";
             sleep 2;
-            printf "Press [enter] key to continue\n";
+            info "Press [enter] key to continue\n";
             read enterkey;
             main_menu;
          fi
@@ -602,16 +639,16 @@ case $1 in
       main_menu;
       ;;
   1) clear;
-      printf "正在启动系统实例....";
+      printf "Starting SAP Instance....";
       sapinstance_start
       rc=$?
       if [ $rc ]; then
          clear;
-         printf "系统已完成启动\n";
+         printf "SAP Instance started successfully. \n";
          STATUS="SUCCESS"
       else
          clear;
-         printf "系统启动失败\n";
+         printf "SAP Instance started unsuccessfully. \n";
          STATUS="NOT_RUNNING"
       fi
       sleep 2;
@@ -620,30 +657,33 @@ case $1 in
       sub_menu
       ;;
    2) clear;
-      printf "正在停止系统实例....";
+      printf "Stopping SAP Instance ....";
       sapinstance_stop
       rc=$?
       if [ $rc ]; then
          clear;
-         printf "系统停止已完成！五秒后将自动重启本实例！\n";
+         # printf "系统停止已完成！五秒后将自动重启本实例！\n";
+         printf "SAP Instance stop Completed. After 5 Seconds will restart SAP Instatnce automatically. \n";
          STATUS="NOT_RUNNING"
          sleep 5;
          clear;
-         printf "正在启动系统实例....";
+         printf "Strarting SAP Instatnce....";
          sapinstance_start
          rc=$?
          if [ $rc ]; then
             clear;
-            printf "系统已完成启动\n";
+            printf "SAP Instance started successfully\n";
             STATUS="SUCCESS"
          else
             clear;
-            printf "系统启动失败\n";
+            # printf "系统启动失败\n";
+            printf "SAP Instance start unsuccessfully. \n";
             STATUS="NOT_RUNNING"
          fi
       else
          clear;
-         printf "系统停止失败\n";
+         # printf "系统停止失败\n";
+         printf "SAP Instance Stop unsuccessfully.\n";
          STATUS="SUCCESS"
       fi
       sleep 2;
@@ -652,16 +692,18 @@ case $1 in
       sub_menu
       ;;
    3) clear;
-      printf "正在停止系统实例....";
+      printf "Stopping SAP Instance...";
       sapinstance_stop
       rc=$?
       if [ $rc ]; then
          clear;
-         printf "系统停止已完成\n";
+         # printf "系统停止已完成\n";
+         printf "SAP Instance Stop Successfuly.\n";
          STATUS="NOT_RUNNING"
       else
          clear;
-         printf "系统停止失败\n";
+         # printf "系统停止失败\n";
+         printf "SAP Instance Failure Started.\n";
          STATUS="SUCCESS"
       fi
       sleep 2;
@@ -672,7 +714,8 @@ case $1 in
    # 获得所有进程
    4) clear;
       printf "\n"
-      printf "您的实例${SID}(${InstanceNr}) 系统进程状态如下\n"  
+      # printf "您的实例${SID}(${InstanceNr}) 系统进程状态如下\n"  
+      printf "Instance {SID}(${InstanceNr}) System Process status like below:\n"  
       su - ${SIDADM} -c "sapcontrol -nr ${InstanceNr} -function GetProcessList"
       printf "\n"
       sleep 2;
@@ -683,7 +726,8 @@ case $1 in
    # 启动startsrv服务
    5) clear;
       printf "\n"
-      printf "您的实例${SID}(${InstanceNr})正在启动SAPSTARTSRV状态如下:\n"  
+      # printf "您的实例${SID}(${InstanceNr})正在启动SAPSTARTSRV状态如下:\n"  
+      printf "Instance ${SID}(${InstanceNr}) is starting SAPSTARTSRV and status like below:\n"  
       su - ${SIDADM} -c "sapcontrol -nr ${InstanceNr} -function StartService ${SID}"
       printf "\n"
       sleep 2;
@@ -694,7 +738,7 @@ case $1 in
    # 重启startsrv服务
    6) clear;
       printf "\n"
-      printf "您的实例${SID}(${InstanceNr})正在重启SAPSTARTSRV状态如下:\n"  
+      printf "Instance {SID}(${InstanceNr}) is restarting SAPSTARTSRV and Status like below:\n"  
       su - ${SIDADM} -c "sapcontrol -nr ${InstanceNr} -function RestartService"
       printf "\n"
       sleep 2;
@@ -705,10 +749,11 @@ case $1 in
    # 获得所有进程
    7) clear;
       if [ $STATUS="SUCCESS" ]; then
-         printf "您的实例${SID}(${InstanceNr})正在运行中，正在运行的实例禁止清理共享内存\n"  
+         printf "Instance ${SID}(${InstanceNr}) is running and Forbidden clearing shared memory\n"  
       else
          printf "\n"
-         printf "正在为您清理${SID}(${InstanceNr})本实例下共享内存\n"  
+         # printf "正在为您清理${SID}(${InstanceNr})本实例下共享内存\n"  
+         printf "Clearing ${SID}(${InstanceNr}) Shared Memory\n"  
          su - ${SIDADM} -c "cleanipc $InstanceNr remove"
          printf "\n"
       fi
@@ -720,7 +765,8 @@ case $1 in
    # 获得授权信息
    8) clear;
       printf "\n"
-      printf "您的实例${SID}(${InstanceNr}) 授权信息如下\n"  
+      # printf "您的实例${SID}(${InstanceNr}) 授权信息如下\n"  
+      printf "Your Instance ${SID}(${InstanceNr}) Authorization information\n"  
       su - ${SIDADM} -c "saplikey pf=${SAPSTARTPROFILE} -show"
       printf "\n"
       sleep 2;
@@ -731,7 +777,8 @@ case $1 in
    # 强制终止实例
    9) clear;
       printf "\n"
-      printf "您的实例${SID}(${InstanceNr}) 正在强制终止进程\n"
+      # printf "您的实例${SID}(${InstanceNr}) 正在强制终止进程\n"
+      printf "SAP Instance ${SID}(${InstanceNr}) will be killed Mandatory\n"
       cleanup_instance
       STATUS="NOT_RUNNING"
       printf "\n"
@@ -743,7 +790,8 @@ case $1 in
    # 检查参数文件
    10) clear;
       printf "\n"
-      printf "您的实例${SID}(${InstanceNr}) 参数文件检查如下\n"  
+      # printf "您的实例${SID}(${InstanceNr}) 参数文件检查如下\n"  
+      printf "SAP Instance ${SID}(${InstanceNr}) Parameter files checked information\n"  
       su - ${SIDADM} -c "sappfpar check pf=${SAPSTARTPROFILE}"
       printf "\n"
       sleep 2;
@@ -785,8 +833,10 @@ case $1 in
    # 检查java数据库连接
    95) clear;
       printf "\n"
-      printf "正在为您检测实例${SID}(${InstanceNr}) 连接状态\n"   
-      printf "正在获得..\n"
+      # printf "正在为您检测实例${SID}(${InstanceNr}) 连接状态\n"   
+      printf "Checking SAP Instance {SID}(${InstanceNr}) Connection Status\n"   
+      # printf "正在获得..\n"
+      printf "Acquiring..\n"
       cd  /usr/sap/${SID}/${InstanceName}/j2ee/configtool > /dev/null
       output=$(source /usr/sap/${SID}/${InstanceName}/j2ee/configtool/consoleconfig.sh << EOF
 12
@@ -794,7 +844,7 @@ EOF
 )
       clear
       printf "\n"
-      printf "您的J2EE实例${SID}(${InstanceNr}) 连接状态为:\n" 
+      printf "J2EE Instance ${SID}(${InstanceNr}) Connection Status is:\n" 
       printf "$(echo "$output" | grep "Connecting to database")\n"
       printf "$(echo "$output" | grep "Scanning cluster data")\n"
       cd  /usr/sap/ > /dev/null
@@ -807,9 +857,9 @@ EOF
    # 检查ABAP系统数据库连接
    96) clear;
       printf "\n"
-      printf "正在为您检查数据库连接,显示00证明连接正常\n"  
-      su - ${SIDADM} -c "R3trans -dx -w ${SAPWORK}/trans.log"
-      printf "若失败请检查${SAPWORK}/trans.log日志\n"  
+      printf "Checking Databases Connetion, and dIsplay 00 means connected successfylly.\n"  
+      su - ${SIDADM} -c "R3trans -dx -w ${SAPWORK}/trans.log "
+      printf " Failure log file path: ${SAPWORK}/trans.log .\n"  
       printf "\n"
       sleep 2;
       printf "Press [enter] key to continue\n";
@@ -819,7 +869,7 @@ EOF
    # 启动Configtool
    97) clear;
       printf "\n"
-      printf "正在为您启动Configtool.您的必须使用XHELL等工具\n"  
+      printf "You MUST use Xshell or Similar tools to Start Configtool.\n"  
       cd  /usr/sap/${SID}/${InstanceName}/j2ee/configtool > /dev/null
       source /usr/sap/${SID}/${InstanceName}/j2ee/configtool/configtool.sh
       cd  /usr/sap/ > /dev/null
@@ -832,7 +882,7 @@ EOF
    # 获得hana版本
    98) clear;
       printf "\n"
-      printf "您的数据库实例${SID}(${InstanceNr}) 版本为\n"  
+      printf "Database Instance ${SID}(${InstanceNr}) Version is:\n"  
       su - ${SIDADM} -c "hdbsrvutil -v "
       printf "\n"
       sleep 2;
@@ -843,7 +893,7 @@ EOF
    #获得Log
    99) clear;
       printf "\n"
-      printf "您的实例${SID}(${InstanceNr}) 可收集的日志列表为\n"
+      printf "SAP Insatance ${SID}(${InstanceNr}) logs list has Collected.\n"
       printf "|================================log list======================================\n"
       su - ${SIDADM} -c "sapcontrol -nr ${InstanceNr} -function ListLogFiles -format script" | awk  -v sid="${SID}" -v instance="${InstanceName}"  'BEGIN{FS=": "} /filename:/{filename=$2} /size:/{size=$2; printf "| filename :/usr/sap/%s/%s/%s  size: %s\n", sid, instance, filename, size}'
       printf "|==============================================================================\n"   
@@ -899,7 +949,7 @@ function log_action {
 function showversion {
    printf "|================================Version Infor=================================\n"
    printf "|                                                                              \n"
-   printf "| V 0.0.1 : 初始化版本                                                          \n"
+   printf "| V 0.0.1 : Initialization Version                                             \n"
    printf "|                                                                              \n"
    printf "|==============================================================================\n"
 }
@@ -908,18 +958,17 @@ function showversion {
 # Help functions
 ##################################################
 function showhelp {
-   printf "|====================================帮助文档===================================\n"
+   printf "|=================================== Usage ====================================\n"
    printf "|                                                                              \n"
-   printf "| https://github.com/fengjicheng/sapmenu/                                      \n"
-   printf "| 此工具为SHELL 调用sapcontrol来启动停止SAP服务，如在启停中遇到问题请检查相应日     \n"
-   printf "| 志文件，或者联系作者： 冯际成  手机号 15209793953 Email： 604756218@qq.com      \n"
-   printf "|                                                                              \n"
-   printf "| 也可使用sap提供工具自动化分析相关日志文件                                       \n"
+   printf "| Github: github.com/fengjicheng/sapmenu/                                      \n"
+   printf "| Script Purpose: Start and Stop SAP Servcice via sapcontrol in SUSE host      \n"
+   printf "| Phone: (+86)152 0979 3953                                                    \n"
+   printf "| Email: 604756218@qq.com                                                      \n"
+   printf "| Log File of this script:/usr/sap/sap_action.log                               \n"
+   printf "| Sap Offical Tool for log analysis website:                                   \n"
    printf "| https://supportportal-pslogassistant-app.cfapps.eu10.hana.ondemand.com/      \n"
    printf "|                                                                              \n"
-   printf "| 本程序日志文件为:/usr/sap/sap_action.log                                      \n"
-   printf "|                                                                              \n"
-   printf "|==============================================================================\n"
+
 }
 ###################################################
 # Sub Menu for components
@@ -950,8 +999,8 @@ function sub_menu {
       printf "| 2.  Restart                                                                       \n"
       printf "| 3.  Shutdown                                                                      \n"
       printf "| 4.  GetProcessList                                                                \n"
-      printf "| 5.  StartService                                                                  \n"
-      printf "| 6.  RestartService                                                                \n"
+      printf "| 5.  Start Sapcontrol Service                                                                  \n"
+      printf "| 6.  Restart Sapcontrol Service                                                                \n"
       if [ "$SYSTEM_TYPE" = "ABAP" ]; then
          printf "| 7.  Cleanipc                                                                   \n"
          printf "| 8.  Get License                                                                \n"
@@ -1002,10 +1051,10 @@ function main_menu {
     while [ $userchoice != e ]
     do
 		clear
-		printf "|======SAP Maintenance Menu=========================================================\n"
+		printf "|================================Powered by Fengzhicheng===============================\n"
 		printf "| Welcome to the world of SAP, welcome to use this script                           \n"
 		printf "| This system is for personal communication and learning purposes only.             \n"
-		printf "| Please do not use it for any other purposes!                                      \n"
+		printf "| Please DO NOT use it for any Business purposes!                                   \n"
 		printf "| h.  Help                                                                          \n"
 		printf "| r.  Refresh                                                                       \n"
 		printf "| v.  Version                                                                       \n"

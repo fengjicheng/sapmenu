@@ -662,7 +662,6 @@ case $1 in
       rc=$?
       if [ $rc ]; then
          clear;
-         # printf "系统停止已完成！五秒后将自动重启本实例！\n";
          printf "SAP Instance stop Completed. After 5 Seconds will restart SAP Instatnce automatically. \n";
          STATUS="NOT_RUNNING"
          sleep 5;
@@ -676,13 +675,11 @@ case $1 in
             STATUS="SUCCESS"
          else
             clear;
-            # printf "系统启动失败\n";
             printf "SAP Instance start unsuccessfully. \n";
             STATUS="NOT_RUNNING"
          fi
       else
          clear;
-         # printf "系统停止失败\n";
          printf "SAP Instance Stop unsuccessfully.\n";
          STATUS="SUCCESS"
       fi
@@ -697,12 +694,10 @@ case $1 in
       rc=$?
       if [ $rc ]; then
          clear;
-         # printf "系统停止已完成\n";
          printf "SAP Instance Stop Successfuly.\n";
          STATUS="NOT_RUNNING"
       else
          clear;
-         # printf "系统停止失败\n";
          printf "SAP Instance Failure Started.\n";
          STATUS="SUCCESS"
       fi
@@ -713,9 +708,8 @@ case $1 in
       ;;
    # 获得所有进程
    4) clear;
-      printf "\n"
-      # printf "您的实例${SID}(${InstanceNr}) 系统进程状态如下\n"  
-      printf "Instance {SID}(${InstanceNr}) System Process status like below:\n"  
+      printf "\n" 
+      printf "Instance ${SID}(${InstanceNr}) System Process status like below:\n"  
       su - ${SIDADM} -c "sapcontrol -nr ${InstanceNr} -function GetProcessList"
       printf "\n"
       sleep 2;
@@ -725,8 +719,7 @@ case $1 in
       ;;
    # 启动startsrv服务
    5) clear;
-      printf "\n"
-      # printf "您的实例${SID}(${InstanceNr})正在启动SAPSTARTSRV状态如下:\n"  
+      printf "\n" 
       printf "Instance ${SID}(${InstanceNr}) is starting SAPSTARTSRV and status like below:\n"  
       su - ${SIDADM} -c "sapcontrol -nr ${InstanceNr} -function StartService ${SID}"
       printf "\n"
@@ -752,7 +745,6 @@ case $1 in
          printf "Instance ${SID}(${InstanceNr}) is running and Forbidden clearing shared memory\n"  
       else
          printf "\n"
-         # printf "正在为您清理${SID}(${InstanceNr})本实例下共享内存\n"  
          printf "Clearing ${SID}(${InstanceNr}) Shared Memory\n"  
          su - ${SIDADM} -c "cleanipc $InstanceNr remove"
          printf "\n"
@@ -764,9 +756,8 @@ case $1 in
       ;;
    # 获得授权信息
    8) clear;
-      printf "\n"
-      # printf "您的实例${SID}(${InstanceNr}) 授权信息如下\n"  
-      printf "Your Instance ${SID}(${InstanceNr}) Authorization information\n"  
+      printf "\n"  
+      printf "Your Instance ${SID}(${InstanceNr}) License information\n"  
       su - ${SIDADM} -c "saplikey pf=${SAPSTARTPROFILE} -show"
       printf "\n"
       sleep 2;
@@ -777,7 +768,6 @@ case $1 in
    # 强制终止实例
    9) clear;
       printf "\n"
-      # printf "您的实例${SID}(${InstanceNr}) 正在强制终止进程\n"
       printf "SAP Instance ${SID}(${InstanceNr}) will be killed Mandatory\n"
       cleanup_instance
       STATUS="NOT_RUNNING"
@@ -789,8 +779,7 @@ case $1 in
       ;;
    # 检查参数文件
    10) clear;
-      printf "\n"
-      # printf "您的实例${SID}(${InstanceNr}) 参数文件检查如下\n"  
+      printf "\n" 
       printf "SAP Instance ${SID}(${InstanceNr}) Parameter files checked information\n"  
       su - ${SIDADM} -c "sappfpar check pf=${SAPSTARTPROFILE}"
       printf "\n"
@@ -1092,6 +1081,9 @@ SAPHOSTOSCOL="/usr/sap/hostctrl/exe/saposcol"
 log_action "Starting sap_menu.sh "
 log_action "Run Ip $USER_IP "
 check_user
+log_action "User is normal"
 check_sap_env
+log_action "SAP environment variable is normal"
 get_sap_list
+log_action "Successfully obtained SAP application list"
 main_menu

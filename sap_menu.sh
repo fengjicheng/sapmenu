@@ -4,7 +4,7 @@
 # *                           NOTICE                            *
 # *        SAP Server Instance START-STOP Script                *
 # ***************************************************************
-# set -eu -o pipefail
+set -eu -o pipefail
 # 获得当前路径
 
 __time=$(date)
@@ -212,7 +212,7 @@ declare -A profile_info
 function get_sap_list {
    clear
    printf "Loading...\n"
-   PROFILES=$(ls -1 /usr/sap/???/SYS/profile/???_*_* | grep -vE '\.[0-9]$|\.old$|_check$|\.log\.backup$|\.backup$|dev_|\.bak$' 2>/dev/null)
+   PROFILES=$(ls -1 /usr/sap/???/SYS/profile/???_*_* | grep -vE '\.[0-9]+$|\.old$|_check$|\.log\.backup$|\.backup$|dev_|\.bak$' 2>/dev/null)
    index=1
    for PROFILE in $PROFILES; do
       # profile suddenly disappeared?
@@ -832,10 +832,8 @@ case $1 in
       ;;
    # 检查java数据库连接
    95) clear;
-      printf "\n"
-      # printf "正在为您检测实例${SID}(${InstanceNr}) 连接状态\n"   
-      printf "Checking SAP Instance {SID}(${InstanceNr}) Connection Status\n"   
-      # printf "正在获得..\n"
+      printf "\n"   
+      printf "Checking SAP Instance ${SID}(${InstanceNr}) Connection Status\n"   
       printf "Acquiring..\n"
       cd  /usr/sap/${SID}/${InstanceName}/j2ee/configtool > /dev/null
       output=$(source /usr/sap/${SID}/${InstanceName}/j2ee/configtool/consoleconfig.sh << EOF

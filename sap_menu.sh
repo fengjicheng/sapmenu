@@ -4,7 +4,7 @@
 # *                           NOTICE                            *
 # *        SAP Server Instance START-STOP Script                *
 # ***************************************************************
-set -eu -o pipefail
+#set -eu -o pipefail
 # 获得当前路径
 
 __time=$(date)
